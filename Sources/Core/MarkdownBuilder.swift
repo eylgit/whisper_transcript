@@ -103,21 +103,55 @@ enum MarkdownBuilder {
         out += "engine: \(yaml("whisper.cpp — " + (result.usedNeuralEngine ? "Apple Neural Engine + Metal" : "Metal")))\n"
         out += "transcribed: \(yaml(stamp.string(from: Date())))\n"
         out += "processing_time: \(yaml(formatDuration(result.processingTime)))\n"
+        if let summary = result.chunkingSummary {
+            out += "chunking: \(yaml(summary))\n"
+        }
         out += "offline: true\n"
         out += "---\n\n"
         out += "# \(title)\n\n"
 
-        let paras = paragraphs(from: result.segments)
-        if paras.isEmpty {
+        if result.segments.isEmpty {
             out += "_No speech was detected in this recording._\n"
             return out
         }
-        out += paras.joined(separator: "\n\n")
-        out += "\n\n"
+
+        for entry in result.chunks {
+            switch entry.chunk.kind {
+            case .speech:
+                let paras = paragraphs(from: entry.segments)
+                guard !paras.isEmpty else { continue }
+                out += paras.joined(separator: "\n\n") + "\n\n"
+
+            case .silence:
+                // A stretch measured as quiet. It is transcribed anyway, because
+                // the measurement can be wrong and losing speech silently would
+                // be far worse than a redundant marker. It is fenced off and
+                // labelled because a quiet stretch is exactly where the model is
+                // most likely to invent fluent text that was never spoken.
+                let from = formatTimestamp(entry.chunk.start)
+                let to = formatTimestamp(entry.chunk.end)
+                let length = formatDuration(entry.chunk.duration)
+
+                out += "> ⏸ **Silence — \(from) to \(to)** (\(length))\n"
+                out += "> Measured as quiet, transcribed separately as a precaution.\n"
+                out += "> Treat anything below as unreliable until the end marker.\n>\n"
+                if entry.segments.isEmpty {
+                    out += "> _Nothing was transcribed here._\n>\n"
+                } else {
+                    for para in paragraphs(from: entry.segments) {
+                        out += "> \(para)\n>\n"
+                    }
+                }
+                out += "> ⏹ **End of silence — \(to)**\n\n"
+            }
+        }
 
         out += "<details>\n<summary>Timestamped segments</summary>\n\n"
-        for seg in result.segments {
-            out += "- `[\(formatTimestamp(seg.start))]` \(seg.text)\n"
+        for entry in result.chunks {
+            let marker = entry.chunk.kind == .silence ? " _(in silence)_" : ""
+            for seg in entry.segments {
+                out += "- `[\(formatTimestamp(seg.start))]`\(marker) \(seg.text)\n"
+            }
         }
         out += "\n</details>\n"
         return out

@@ -101,8 +101,8 @@ struct ContentView: View {
 
                 Toggle("Translate into English", isOn: $model.settings.translateToEnglish)
                 Toggle("Keep the intermediate 16 kHz WAV", isOn: $model.settings.keepIntermediateWAV)
-                Toggle("Carry text between chunks", isOn: $model.settings.carryContext)
-                Text("Carrying text improves consistency of unusual names, but lets the model lock into repeating a sentence. Off is safer.")
+                Toggle("Carry text between the model's windows", isOn: $model.settings.carryContext)
+                Text("On by default: it produces correct punctuation and consistent spelling. Long recordings are split at pauses anyway, which contains the repetition loops this used to risk.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

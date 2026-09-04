@@ -57,7 +57,7 @@ struct Settings {
     var language = "auto"
     var translateToEnglish = false
     var keepIntermediateWAV = false
-    var carryContext = false
+    var carryContext = true
 
     static let languages: [(code: String, name: String)] = [
         ("auto", "Detect automatically"), ("en", "English"), ("zh", "Chinese"),

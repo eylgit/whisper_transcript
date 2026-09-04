@@ -94,23 +94,79 @@ enum Transcriber {
             }
         }
 
-        onStage?(.transcribing(0))
-        let output = try WhisperRunner.transcribe(
-            wav: wav, layout: layout, options: request.options,
-            onProgress: { onStage?(.transcribing($0)) },
-            onLog: onLog,
-            registerHandle: registerHandle)
+        // Divide the recording at long pauses. Each chunk is transcribed on its
+        // own with no text carried across the boundary, so a decoder that locks
+        // into repeating itself cannot spread past the pause it started in.
+        var chunks: [Chunk]
+        var chunkingSummary: String? = nil
+        do {
+            let analysis = try SilenceDetector.analyse(wav: wav)
+            chunks = ChunkPlanner.plan(duration: info.duration, silences: analysis.regions)
+            onLog?("audio: \(analysis.summary)")
+            if chunks.count > 1 {
+                chunkingSummary = "\(chunks.count) chunks; \(analysis.summary)"
+            }
+        } catch {
+            // Never fatal: an unreadable WAV header only costs us the chunking.
+            onLog?("silence analysis unavailable (\(error.localizedDescription)); one pass")
+            chunks = [Chunk(kind: .speech, start: 0, end: info.duration)]
+        }
 
-        guard !output.segments.isEmpty else { throw TranscriberError.noSpeech(source) }
+        var transcribed: [TranscribedChunk] = []
+        var language: String? = nil
+        var usedNeuralEngine = false
+        let total = Double(chunks.count)
+
+        for (index, chunk) in chunks.enumerated() {
+            onStage?(.transcribing(Double(index) / total))
+            if chunks.count > 1 {
+                onLog?(String(format: "chunk %d/%d %@ %.1fs-%.1fs",
+                              index + 1, chunks.count,
+                              chunk.kind == .silence ? "(silence)" : "(speech)",
+                              chunk.start, chunk.end))
+            }
+            let output = try WhisperRunner.transcribe(
+                wav: wav, layout: layout, options: request.options,
+                offset: chunk.start,
+                duration: chunks.count > 1 ? chunk.duration : nil,
+                onProgress: { onStage?(.transcribing((Double(index) + $0) / total)) },
+                onLog: onLog,
+                registerHandle: registerHandle)
+
+            if language == nil { language = output.detectedLanguage }
+            usedNeuralEngine = usedNeuralEngine || output.usedNeuralEngine
+
+            // whisper's --duration bounds where decoding *starts*, not what it
+            // reads: each window is a fixed 30s taken from the whole file, so the
+            // last window of a chunk sees up to 30s of audio past the requested
+            // end. Left alone, a silence chunk swallows the speech that follows
+            // it and the same passage appears twice -- once fenced off as
+            // unreliable. Keeping only segments whose midpoint lies inside the
+            // chunk discards that overrun while leaving genuine segments, which
+            // sit well within their chunk because chunks end inside pauses.
+            let owned = chunks.count == 1 ? output.segments : output.segments.filter {
+                let midpoint = ($0.start + $0.end) / 2
+                return midpoint >= chunk.start && midpoint <= chunk.end
+            }
+            if owned.count != output.segments.count {
+                onLog?("chunk \(index + 1): dropped \(output.segments.count - owned.count) segment(s) that overran the chunk")
+            }
+            transcribed.append(TranscribedChunk(chunk: chunk, segments: owned))
+        }
+
+        guard transcribed.contains(where: { !$0.segments.isEmpty }) else {
+            throw TranscriberError.noSpeech(source)
+        }
 
         onStage?(.writing)
         let result = TranscriptionResult(
-            segments: output.segments,
-            detectedLanguage: output.detectedLanguage,
+            chunks: transcribed,
+            detectedLanguage: language,
             audioDuration: info.duration,
             modelName: layout.modelName,
-            usedNeuralEngine: output.usedNeuralEngine,
-            processingTime: Date().timeIntervalSince(started))
+            usedNeuralEngine: usedNeuralEngine,
+            processingTime: Date().timeIntervalSince(started),
+            chunkingSummary: chunkingSummary)
 
         let markdown = MarkdownBuilder.document(for: result, source: source)
         let destination = outputURL(for: source, overwrite: request.overwrite)

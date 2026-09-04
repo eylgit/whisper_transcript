@@ -7,14 +7,24 @@ struct Segment {
     let text: String
 }
 
+/// One transcribed range of the recording, and what it produced.
+struct TranscribedChunk {
+    let chunk: Chunk
+    let segments: [Segment]
+}
+
 /// Everything a finished transcription knows about itself.
 struct TranscriptionResult {
-    let segments: [Segment]
+    let chunks: [TranscribedChunk]
     let detectedLanguage: String?
     let audioDuration: TimeInterval
     let modelName: String
     let usedNeuralEngine: Bool
     let processingTime: TimeInterval
+    /// How the recording was divided, for the frontmatter. Nil if not chunked.
+    let chunkingSummary: String?
+
+    var segments: [Segment] { chunks.flatMap(\.segments) }
 }
 
 func formatTimestamp(_ t: TimeInterval) -> String {

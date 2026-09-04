@@ -6,14 +6,18 @@ struct WhisperOptions {
     var translateToEnglish: Bool = false
     /// 4 = the M-series performance cores. Adding efficiency cores usually hurts.
     var threads: Int = 4
-    /// Feed each chunk's decoded text forward as context for the next chunk.
+    /// Let the decoder carry text forward as context between its internal
+    /// 30-second windows.
     ///
-    /// Whisper's decoder can lock into a loop and repeat one sentence for
-    /// minutes, inventing content that was never spoken. Disabling the carry-over
-    /// reliably prevents that, at a small cost to consistency of rare proper
-    /// nouns across a long recording. For a transcription tool, silently
-    /// fabricated text is the worse failure, so this defaults to off.
-    var carryContext: Bool = false
+    /// This is on by default because it is what produces correct punctuation and
+    /// consistent spelling: without it the model restarts cold every 30 seconds,
+    /// often mid-sentence, and no longer knows a sentence is in progress.
+    ///
+    /// It does carry a risk — the decoder can lock into repeating one sentence,
+    /// and the carried text feeds that loop. We contain that with chunk
+    /// boundaries at natural pauses rather than by disabling this, so the quality
+    /// cost is paid only where a speaker had genuinely stopped talking.
+    var carryContext: Bool = true
 }
 
 struct WhisperOutput {
@@ -32,10 +36,15 @@ enum WhisperRunner {
 
     /// Runs whisper-cli and parses its streams. Segments arrive on stdout;
     /// progress, language detection and Core ML status arrive on stderr.
+    /// Transcribes `wav`, optionally only the range starting at `offset` and
+    /// running for `duration`. Timestamps come back measured from the start of
+    /// the file, not the start of the range, so ranges need no rebasing.
     static func transcribe(
         wav: URL,
         layout: Layout,
         options: WhisperOptions,
+        offset: TimeInterval = 0,
+        duration: TimeInterval? = nil,
         onProgress: ((Double) -> Void)? = nil,
         onLog: ((String) -> Void)? = nil,
         registerHandle: ((RunningProcess) -> Void)? = nil
@@ -47,6 +56,8 @@ enum WhisperRunner {
             "-l", options.language,
             "-pp",
         ]
+        if offset > 0 { args += ["-ot", String(Int(offset * 1000))] }
+        if let duration { args += ["-d", String(Int(duration * 1000))] }
         if options.translateToEnglish { args.append("-tr") }
         if !options.carryContext { args += ["-mc", "0"] }
 

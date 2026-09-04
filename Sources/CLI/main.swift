@@ -13,12 +13,21 @@ func usage() -> String {
       -l, --language CODE   Spoken language, or "auto" to detect (default: auto)
       -tr, --translate      Translate the transcript into English
       -t, --threads N       Worker threads (default: 4, the performance cores)
-      -c, --carry-context   Carry text between chunks (better proper-noun
-                            consistency, but risks repetition loops)
+      -C, --no-carry-context
+                            Stop the decoder carrying text between its internal
+                            windows. Avoids repetition loops but degrades
+                            punctuation; normally unnecessary, since the
+                            recording is split at long pauses instead.
       -k, --keep-wav        Keep the intermediate 16 kHz WAV beside the source
       -f, --force           Overwrite an existing .md instead of numbering a new one
       -q, --quiet           Only print the path of each file written
       -h, --help            Show this message
+
+    CHUNKING
+      Long recordings are split at pauses of \(Int(Tuning.minimumSilenceSeconds))s or more and each
+      part is transcribed independently, so a decoder that locks into repeating
+      itself cannot spread past the pause. Quiet stretches are transcribed too,
+      and marked in the transcript.
 
     PRIVACY
       Runs fully offline. Every child process is sandboxed with no network access
@@ -57,8 +66,8 @@ while !args.isEmpty {
     case "-t", "--threads":
         guard let n = Int(value(arg)), n > 0 else { fail("--threads needs a positive integer") }
         options.threads = n
-    case "-c", "--carry-context":
-        options.carryContext = true
+    case "-C", "--no-carry-context":
+        options.carryContext = false
     case "-k", "--keep-wav":
         keepWAV = true
     case "-f", "--force":

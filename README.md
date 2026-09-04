@@ -101,13 +101,69 @@ the GPU still initialises.
 also drops a ~3 GB PyTorch build dependency. `scripts/make-coreml-encoder.sh` is
 kept if you want to re-measure on different hardware.
 
-**Whisper can get stuck repeating itself.** The model sometimes locks into a loop,
-emitting one sentence over and over and inventing content that was never spoken. It
-happens because each chunk's text is fed forward as context for the next. This app
-turns that carry-over off by default (`-mc 0` to whisper.cpp), which eliminated the
-loop entirely in testing. The cost is slightly weaker consistency on unusual proper
-nouns across a long recording — a good trade when the alternative is fabricated text.
-Re-enable it with `--carry-context`, or the matching switch in the app's Options.
+**Whisper can get stuck repeating itself.** The decoder sometimes locks into a
+loop, emitting one sentence over and over and inventing content that was never
+spoken. It also invents text during silence — a stretch of quiet handed to it on
+its own reliably produces something like *"Thank you."* Neither is a bug in this
+app; both are well-known behaviours of the model.
+
+## How long recordings are handled
+
+Recordings over two minutes are split at pauses of three seconds or more, and
+each part is transcribed on its own with no text carried across the boundary. A
+decoder that locks into repeating itself therefore cannot spread past the pause
+it started in.
+
+Pauses are found by measuring loudness **relative to the recording itself** —
+its own noise floor and its own speech level — because a fixed threshold is
+wrong for half of all recordings: quiet speech in one can sit below room tone in
+another. If the two are less than 15 dB apart the recording is too noisy to
+judge, and it is transcribed in a single pass rather than cut in the wrong place.
+
+Around each pause the audio is covered three times over:
+
+```
+    ...speech A...  [========= pause =========]  ...speech B...
+    speech   [ ...A... --- pauseStart+1.5s ]
+    silence           [ pauseStart --------- pauseEnd ]
+    speech                        [ pauseEnd-1.5s --- ...B... ]
+```
+
+Two things follow from that shape. Every instant of audio belongs to at least
+one part, so no words can fall in a crack — coverage is deliberately redundant,
+because a gap would mean silently losing speech while an overlap only means a
+duplicated moment of quiet. And the quiet stretch is **transcribed too**, in
+case the loudness measurement was wrong and someone was in fact speaking softly.
+
+Because quiet stretches are exactly where the model invents things, they are
+fenced off and labelled in the transcript:
+
+```markdown
+> ⏸ **Silence — 00:04:32 to 00:04:51** (19s)
+> Measured as quiet, transcribed separately as a precaution.
+> Treat anything below as unreliable until the end marker.
+>
+> Thank you.
+>
+> ⏹ **End of silence — 00:04:51**
+```
+
+Every tunable number lives in `Sources/Core/Tuning.swift`, each with a comment
+explaining what it does and why it is set where it is.
+
+### Known limitation
+
+**A recording with no long pauses gets no protection.** Chunking can only
+contain a loop at a boundary, and a continuous monologue offers none. On such a
+file the decoder can still lock up, and nothing in the output will warn you.
+This is a deliberate trade: the alternative was disabling the text carry-over
+globally, which measurably degrades punctuation and sentence structure on
+*every* recording to guard against a failure that affects a few. Pass
+`--no-carry-context` to make that trade on a specific file.
+
+There is also a cost: each part carries about 3.2 seconds of fixed overhead.
+A one-hour recording with twenty long pauses runs roughly 10% slower. A
+recording with very frequent long pauses would be worse.
 
 ## How it's built
 
