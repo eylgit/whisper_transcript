@@ -57,7 +57,16 @@ enum ChunkPlanner {
             // Ignore a pause already covered by the previous one's trailing buffer.
             guard silence.end > cursor else { continue }
 
-            appendIfWorthwhile(.speech, cursor, silence.start + buffer)
+            // Only emit a speech chunk when speech actually precedes the pause.
+            // A recording that opens with a pause, or a pause already reached by
+            // the previous one's trailing buffer, would otherwise produce a
+            // "speech" chunk lying entirely inside quiet audio — handed to the
+            // decoder as speech, and so unmarked in the transcript. Quiet is
+            // exactly where the model invents text, so that chunk would be the
+            // one place a hallucination could arrive unlabelled.
+            if cursor < silence.start {
+                appendIfWorthwhile(.speech, cursor, silence.start + buffer)
+            }
             appendIfWorthwhile(.silence, silence.start, silence.end)
             cursor = max(cursor, silence.end - buffer)
         }
