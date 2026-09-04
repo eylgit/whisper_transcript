@@ -6,6 +6,14 @@ struct WhisperOptions {
     var translateToEnglish: Bool = false
     /// 4 = the M-series performance cores. Adding efficiency cores usually hurts.
     var threads: Int = 4
+    /// Feed each chunk's decoded text forward as context for the next chunk.
+    ///
+    /// Whisper's decoder can lock into a loop and repeat one sentence for
+    /// minutes, inventing content that was never spoken. Disabling the carry-over
+    /// reliably prevents that, at a small cost to consistency of rare proper
+    /// nouns across a long recording. For a transcription tool, silently
+    /// fabricated text is the worse failure, so this defaults to off.
+    var carryContext: Bool = false
 }
 
 struct WhisperOutput {
@@ -40,6 +48,7 @@ enum WhisperRunner {
             "-pp",
         ]
         if options.translateToEnglish { args.append("-tr") }
+        if !options.carryContext { args += ["-mc", "0"] }
 
         // whisper-cli only ever reads; it needs no write access at all.
         let (exe, wrapped) = Sandbox.wrap(

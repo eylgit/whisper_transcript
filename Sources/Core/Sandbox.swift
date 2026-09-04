@@ -3,9 +3,8 @@ import Foundation
 /// Wraps a child process in an OS-enforced sandbox.
 ///
 /// The profile is a *deny-list* on purpose. An allow-list would cut off the IOKit
-/// accelerator access Metal needs and the mach lookup Core ML needs to reach the
-/// Neural Engine, silently dropping us back to slow CPU inference. So we start from
-/// `(allow default)` and remove exactly two things:
+/// accelerator access Metal needs, silently dropping us back to far slower CPU
+/// inference. So we start from `(allow default)` and remove exactly two things:
 ///
 ///   * all network access — the offline guarantee, enforced by the kernel
 ///   * all filesystem writes except the directory holding the user's audio
@@ -24,16 +23,37 @@ enum Sandbox {
                    .replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
 
-    /// Directories the OS itself needs to write to for GPU/ANE shader and model
-    /// caches. These hold compiled model/shader code, never audio or transcripts.
+    /// Fully resolves a path. The sandbox matches on resolved paths, so a rule
+    /// naming /var/folders/... never fires because the kernel sees
+    /// /private/var/folders/... . URL.resolvingSymlinksInPath does not resolve
+    /// the /var firmlink, so use realpath(3) directly.
+    static func realPath(_ path: String) -> String? {
+        guard let raw = realpath(path, nil) else { return nil }
+        defer { free(raw) }
+        return String(cString: raw)
+    }
+
+    /// A write rule is only safe if it names a genuinely nested directory.
+    /// Granting "/" or "/private" would quietly void the whole restriction.
+    private static func isSafeWritableRoot(_ resolved: String) -> Bool {
+        let parts = resolved.split(separator: "/")
+        return resolved.hasPrefix("/") && parts.count >= 2
+    }
+
+    /// The single directory the OS needs for its compiled-GPU-shader cache.
+    ///
+    /// Measured: with this allowed, a run takes ~3s; with nothing writable,
+    /// Metal recompiles all 20 shader libraries every time and the same run
+    /// takes ~19s. Testing showed ~/Library/Caches and the darwin temp
+    /// directory are *not* needed, so neither is granted.
+    ///
+    /// This directory holds compiled shader code, never audio or transcripts.
     static func systemCacheDirs() -> [URL] {
-        var dirs: [URL] = []
-        if let c = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            dirs.append(c)
-        }
-        // Per-user darwin temp/cache root (/private/var/folders/xx/...).
-        dirs.append(URL(fileURLWithPath: NSTemporaryDirectory()).deletingLastPathComponent())
-        return dirs
+        var buf = [CChar](repeating: 0, count: 1024)
+        let n = confstr(_CS_DARWIN_USER_CACHE_DIR, &buf, buf.count)
+        guard n > 0, n <= buf.count else { return [] }
+        let path = String(cString: buf)
+        return path.isEmpty ? [] : [URL(fileURLWithPath: path)]
     }
 
     static func profile(writableDirs: [URL], allowSystemCaches: Bool = true) -> String {
@@ -42,18 +62,19 @@ enum Sandbox {
 
         var lines = [
             "(version 1)",
-            ";; Permissive base so Metal (IOKit) and Core ML (ANE mach service) keep working.",
+            ";; Permissive base so Metal keeps its IOKit GPU access.",
             "(allow default)",
             ";; The offline guarantee, enforced by the kernel rather than by convention.",
             "(deny network*)",
             ";; Nothing may be written anywhere...",
             "(deny file-write*)",
-            ";; ...except beside the user's own audio file (and OS shader/model caches).",
+            ";; ...except beside the user's own audio file (and the GPU shader cache).",
         ]
         var seen = Set<String>()
         for dir in writable {
-            let p = dir.resolvingSymlinksInPath().path
-            guard seen.insert(p).inserted else { continue }
+            guard let p = realPath(dir.path) ?? realPath(dir.deletingLastPathComponent().path)
+                    .map({ $0 + "/" + dir.lastPathComponent }) else { continue }
+            guard isSafeWritableRoot(p), seen.insert(p).inserted else { continue }
             lines.append("(allow file-write* (subpath \(quote(p))))")
         }
         return lines.joined(separator: "\n")

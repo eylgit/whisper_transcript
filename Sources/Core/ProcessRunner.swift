@@ -108,9 +108,15 @@ enum ProcessRunner {
 
         try process.run()
         registerHandle?(RunningProcess(process))
+        // The child inherited the write ends; the parent must drop its own copies
+        // or the readers never see EOF and we stall until the drain timeout.
+        try? outPipe.fileHandleForWriting.close()
+        try? errPipe.fileHandleForWriting.close()
+
         process.waitUntilExit()
-        // Wait for the readers to drain so no output is lost after exit.
-        _ = group.wait(timeout: .now() + 10)
+        // EOF is now reliable, so this returns immediately; the bound is only a
+        // guard against a wedged reader.
+        _ = group.wait(timeout: .now() + 5)
         return process.terminationStatus
     }
 }

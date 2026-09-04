@@ -59,8 +59,15 @@ enum AudioConverter {
         let duration = Double(firstMatch(#"estimated duration:\s*([0-9.]+)"#, in: out) ?? "") ?? 0
         let channels = Int(firstMatch(#"([0-9]+)\s+ch\b"#, in: out) ?? "") ?? 0
         let rate = Int(Double(firstMatch(#"([0-9.]+)\s+Hz"#, in: out) ?? "") ?? 0)
-        let pcm16 = out.contains("'lpcm'") && out.contains("16-bit")
+        // afinfo describes 16-bit PCM two different ways depending on container:
+        //   "1 ch,  16000 Hz, Int16"                                    (plain WAV)
+        //   "1 ch,  16000 Hz, 'lpcm' (...) 16-bit little-endian signed integer"
+        // Big-endian variants print as BEI16 and must not be accepted.
+        let isWAVE = out.contains("File type ID:") && out.contains("WAVE")
+        let shortForm = out.contains("Int16") && !out.contains("BEI16")
+        let longForm = out.contains("'lpcm'") && out.contains("16-bit")
             && out.contains("little-endian") && out.contains("signed integer")
+        let pcm16 = isWAVE && (shortForm || longForm)
 
         guard duration > 0 || channels > 0 else {
             throw AudioError.unreadable(url, "afinfo reported no decodable audio track.\n\(out)")

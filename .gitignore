@@ -4,5 +4,8 @@ build/
 # Downloaded whisper models (multi-GB, fetched by scripts/)
 models/
 
+# Built application bundle (reproducible via scripts/build-app.sh)
+Transcribe.app/
+
 # macOS
 .DS_Store
