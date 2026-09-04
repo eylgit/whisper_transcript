@@ -1,6 +1,6 @@
 import Foundation
 
-enum ChunkKind: Equatable {
+public enum ChunkKind: Equatable {
     case speech
     /// A stretch the loudness analysis judged quiet. Transcribed anyway, because
     /// the analysis can be wrong and quietly dropping speech is the worst thing

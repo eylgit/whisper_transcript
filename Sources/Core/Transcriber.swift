@@ -1,12 +1,12 @@
 import Foundation
 
-struct TranscriptionRequest {
-    let source: URL
-    var options = WhisperOptions()
+public struct TranscriptionRequest {
+    public let source: URL
+    public var options = WhisperOptions()
     /// Keep the intermediate 16 kHz WAV instead of removing it on success.
-    var keepIntermediateWAV = false
+    public var keepIntermediateWAV = false
     /// Overwrite an existing .md rather than picking the next free name.
-    var overwrite = false
+    public var overwrite = false
     /// Transcribe the quiet stretches too, rather than only the speech.
     ///
     /// On by default: the loudness measurement can be wrong, and someone
@@ -14,10 +14,12 @@ struct TranscriptionRequest {
     /// is faster and produces a tidier transcript, at the cost of that
     /// guarantee. Quiet stretches are marked either way, so the reader can
     /// always see where they were.
-    var transcribeSilence = true
+    public var transcribeSilence = true
+
+    public init(source: URL) { self.source = source }
 }
 
-enum Stage {
+public enum Stage {
     case inspecting
     case converting
     case analysing
@@ -40,9 +42,9 @@ enum TranscriberError: LocalizedError {
     }
 }
 
-enum Transcriber {
+public enum Transcriber {
     /// Marker that makes our intermediate file obvious in Finder next to the original.
-    static let intermediateSuffix = ".whisper-tmp.wav"
+    public static let intermediateSuffix = ".whisper-tmp.wav"
 
     static func intermediateURL(for source: URL) -> URL {
         let stem = source.deletingPathExtension().lastPathComponent
@@ -65,7 +67,7 @@ enum Transcriber {
     }
 
     @discardableResult
-    static func run(
+    public static func run(
         _ request: TranscriptionRequest,
         layout: Layout,
         onStage: ((Stage) -> Void)? = nil,

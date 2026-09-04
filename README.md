@@ -245,25 +245,68 @@ therefore off, which also drops a ~3 GB PyTorch build dependency.
 ## How it's built
 
 ```
-Sources/Core/     audio conversion, whisper driver, Markdown assembly, sandbox
-Sources/App/      SwiftUI drag-and-drop front end
-Sources/CLI/      command line front end
-scripts/          build, icon generation, sandbox verification
+Sources/Core/        TranscribeCore — conversion, chunking, whisper driver, sandbox
+Sources/App/         SwiftUI drag-and-drop front end
+Sources/CLI/         command line front end
+Tests/               unit tests for the pure core
+scripts/             build, test, icon generation, sandbox verification
 vendor/whisper.cpp   pinned to a specific commit
-models/           ggml-large-v3.bin (checksum-verified)
+models/              ggml-large-v3.bin (checksum-verified)
 ```
 
-Both front ends share `Sources/Core` verbatim, so they cannot drift apart. Swift is
-compiled directly with `swiftc` from the Command Line Tools — there is no Xcode project
-and full Xcode is not required. `Transcribe.app` is self-contained: it carries its own
-copy of `whisper-cli`, the dylibs and the model, so it works wherever you move it. The
-model is placed with an APFS clone, so it costs no extra disk space.
+Both front ends depend on `TranscribeCore` and on nothing else, so they cannot drift
+apart. Its public surface is deliberately small — roughly `Layout`, `Sandbox`,
+`Tuning`, `WhisperOptions`, `TranscriptionRequest` and `Transcriber.run` — and
+everything the front ends do not need stays `internal`. The tests reach the internals
+with `@testable` rather than the API being widened to suit them.
+
+It is a SwiftPM package rather than an Xcode project, so `swift build` from the Command
+Line Tools is enough and full Xcode is not required to build or install anything.
+`Transcribe.app` is self-contained: it carries its own copy of `whisper-cli`, the
+dylibs and the model, so it works wherever you move it. The model is placed with an
+APFS clone, so it costs no extra disk space.
 
 Rebuild after changing Swift source with:
 
 ```sh
 ./scripts/build-app.sh
 ```
+
+## Tests
+
+```sh
+./scripts/test.sh
+```
+
+The full pipeline needs a 3.1 GB model and a GPU, which makes it a poor thing to assert
+against. What is tested instead is everything that is a pure function over plain data,
+which is most of the interesting logic:
+
+- **`ChunkPlanner`** — largely one property, checked over 500 randomly shaped
+  recordings: *every instant of audio belongs to at least one chunk*. Losing speech in
+  a gap between chunks is the worst thing this tool could do, and it would be invisible
+  in the output. This test found a real bug — a recording that opens with a pause
+  produced a leading "speech" chunk lying entirely inside the silence, which is
+  precisely where the model invents text, and it would have reached the transcript
+  unlabelled.
+- **`SilenceDetector`** — against synthesised WAVs at known levels: that a pause is
+  found, that one shorter than the minimum is not, that the same *shape* of recording
+  gives the same answer whether it is loud or faint, and that a recording with too
+  little dynamic range reports **no** pauses rather than guessing at one.
+- **`Sandbox`** — that the profile denies network and writes, that the deny rules
+  precede the allow rules (these profiles are last-match-wins, so the wrong order fails
+  open and silently), and that `/` can never become a writable root. One test runs
+  `sandbox-exec` for real and confirms the kernel refuses a write outside the audio's
+  folder.
+- **`MarkdownBuilder`** — paragraph breaking, CJK text joined without spaces, and that
+  a skipped gap and a listened-to gap carry visibly different wording.
+- **Output naming** — that an existing `.md` is numbered rather than overwritten.
+
+One caveat, since the point of this section is that claims should be checkable: XCTest
+is distributed inside Xcode, not the Command Line Tools. **Building** Transcribe needs
+only the Command Line Tools, as documented above; **running the tests** needs Xcode
+installed. `scripts/test.sh` finds a toolchain that has XCTest without changing your
+global `xcode-select` setting.
 
 ## Requirements
 

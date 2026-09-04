@@ -10,10 +10,10 @@ import Foundation
 ///   * all filesystem writes except the directory holding the user's audio
 ///
 /// The profile is passed inline with `-p`, so no profile file is ever written to disk.
-enum Sandbox {
+public enum Sandbox {
     static let execURL = URL(fileURLWithPath: "/usr/bin/sandbox-exec")
 
-    static var isAvailable: Bool {
+    public static var isAvailable: Bool {
         FileManager.default.isExecutableFile(atPath: execURL.path)
     }
 
@@ -56,7 +56,7 @@ enum Sandbox {
         return path.isEmpty ? [] : [URL(fileURLWithPath: path)]
     }
 
-    static func profile(writableDirs: [URL], allowSystemCaches: Bool = true) -> String {
+    public static func profile(writableDirs: [URL], allowSystemCaches: Bool = true) -> String {
         var writable = writableDirs
         if allowSystemCaches { writable += systemCacheDirs() }
 

@@ -1,11 +1,11 @@
 import Foundation
 
-struct WhisperOptions {
+public struct WhisperOptions {
     /// "auto" for detection, or an ISO code such as "en", "zh", "de".
-    var language: String = "auto"
-    var translateToEnglish: Bool = false
+    public var language: String = "auto"
+    public var translateToEnglish: Bool = false
     /// 4 = the M-series performance cores. Adding efficiency cores usually hurts.
-    var threads: Int = 4
+    public var threads: Int = 4
     /// Let the decoder carry text forward as context between its internal
     /// 30-second windows.
     ///
@@ -17,7 +17,9 @@ struct WhisperOptions {
     /// and the carried text feeds that loop. We contain that with chunk
     /// boundaries at natural pauses rather than by disabling this, so the quality
     /// cost is paid only where a speaker had genuinely stopped talking.
-    var carryContext: Bool = true
+    public var carryContext: Bool = true
+
+    public init() {}
 }
 
 struct WhisperOutput {

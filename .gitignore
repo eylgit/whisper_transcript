@@ -9,3 +9,7 @@ Transcribe.app/
 
 # macOS
 .DS_Store
+
+# SwiftPM
+.build/
+.build-test/

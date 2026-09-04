@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # whisper.cpp is a runtime dependency, not a build one: the Swift code
+          # shells out to whisper-cli and never links against it. Skipping the
+          # submodule keeps CI to seconds instead of compiling it every run.
+          submodules: false
+
+      - name: Toolchain
+        run: swift --version
+
+      - name: Build
+        run: swift build -c release
+
+      # The full pipeline needs a 3.1 GB model, which has no business in CI.
+      # These cover the parts that are pure functions over plain data — where
+      # the chunking, the silence analysis and the sandbox profile actually live.
+      - name: Test
+        run: ./scripts/test.sh
+
+      - name: Check the scripts parse
+        run: for f in setup.sh scripts/*.sh; do bash -n "$f"; done

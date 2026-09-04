@@ -44,14 +44,14 @@ private final class LineBuffer {
 }
 
 /// Handle to a running child process so a GUI can cancel it.
-final class RunningProcess {
+public final class RunningProcess {
     private let process: Process
     private let lock = NSLock()
     private var cancelled = false
 
     init(_ p: Process) { process = p }
 
-    func cancel() {
+    public func cancel() {
         lock.lock(); cancelled = true; lock.unlock()
         if process.isRunning { process.terminate() }
     }

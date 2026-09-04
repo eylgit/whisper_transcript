@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+import TranscribeCore
 
 struct ContentView: View {
     @ObservedObject var model: AppModel

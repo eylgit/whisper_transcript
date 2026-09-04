@@ -19,21 +19,21 @@ struct TranscribedChunk {
 }
 
 /// Where a run has got to, in enough detail to be worth showing someone.
-struct ChunkProgress: Equatable {
-    let index: Int          // zero-based
-    let total: Int
-    let kind: ChunkKind
-    let start: TimeInterval
-    let end: TimeInterval
+public struct ChunkProgress: Equatable {
+    public let index: Int   // zero-based
+    public let total: Int
+    public let kind: ChunkKind
+    public let start: TimeInterval
+    public let end: TimeInterval
     /// Progress within this chunk, 0...1.
-    let fraction: Double
+    public let fraction: Double
 
-    var overall: Double {
+    public var overall: Double {
         total > 0 ? (Double(index) + fraction) / Double(total) : 0
     }
 
     /// e.g. "chunk 3 of 7 · silence · 0:49-1:28"
-    var describe: String {
+    public var describe: String {
         let kindLabel = kind == .silence ? "silence" : "speech"
         return "chunk \(index + 1) of \(total) · \(kindLabel) · "
              + "\(formatTimestamp(start))-\(formatTimestamp(end))"
@@ -60,7 +60,7 @@ func formatTimestamp(_ t: TimeInterval) -> String {
 }
 
 /// Human-friendly duration, e.g. "1h 04m 12s" / "4m 12s" / "12s".
-func formatDuration(_ t: TimeInterval) -> String {
+public func formatDuration(_ t: TimeInterval) -> String {
     let total = Int(t.rounded())
     let (h, m, s) = (total / 3600, (total % 3600) / 60, total % 60)
     if h > 0 { return String(format: "%dh %02dm %02ds", h, m, s) }

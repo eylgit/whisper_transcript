@@ -6,7 +6,7 @@ import Foundation
 ///  2. Repo     — <repo>/vendor/whisper.cpp/build/bin/whisper-cli + <repo>/models/*
 ///
 /// Nothing is ever looked up in a hidden application-support or cache directory.
-struct Layout {
+public struct Layout {
     let whisperCLI: URL
     let model: URL
 
@@ -17,11 +17,11 @@ struct Layout {
         return model.deletingLastPathComponent().appendingPathComponent("\(base)-encoder.mlmodelc")
     }
 
-    var hasCoreMLEncoder: Bool {
+    public var hasCoreMLEncoder: Bool {
         FileManager.default.fileExists(atPath: coreMLEncoder.path)
     }
 
-    var modelName: String { model.deletingPathExtension().lastPathComponent }
+    public var modelName: String { model.deletingPathExtension().lastPathComponent }
 
     enum LayoutError: LocalizedError {
         case notFound(tried: [String])
@@ -37,7 +37,7 @@ struct Layout {
         }
     }
 
-    static func discover() throws -> Layout {
+    public static func discover() throws -> Layout {
         var tried: [String] = []
         let fm = FileManager.default
 

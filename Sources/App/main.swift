@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TranscribeCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()

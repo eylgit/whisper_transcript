@@ -9,16 +9,18 @@ WBIN="$ROOT/vendor/whisper.cpp/build/bin"
 APP="$ROOT/Transcribe.app"
 CONTENTS="$APP/Contents"
 RES="$CONTENTS/Resources"
-SWIFTC=/usr/bin/swiftc
 
 [ -x "$WBIN/whisper-cli" ] || { echo "error: whisper.cpp not built; run setup.sh" >&2; exit 1; }
 mkdir -p "$BUILD"
 
+# SwiftPM rather than an Xcode project: `swift build` ships with the Command
+# Line Tools, so this needs no Xcode. Both front ends link the same
+# TranscribeCore module, so they cannot drift apart.
 echo "==> compiling"
-"$SWIFTC" -swift-version 5 -O "$ROOT"/Sources/Core/*.swift "$ROOT"/Sources/CLI/main.swift \
-  -o "$BUILD/transcribe"
-"$SWIFTC" -swift-version 5 -O "$ROOT"/Sources/Core/*.swift "$ROOT"/Sources/App/*.swift \
-  -o "$BUILD/Transcribe-bin"
+swift build --package-path "$ROOT" -c release
+SPM_BIN="$(swift build --package-path "$ROOT" -c release --show-bin-path)"
+cp "$SPM_BIN/transcribe" "$BUILD/transcribe"
+cp "$SPM_BIN/TranscribeApp" "$BUILD/Transcribe-bin"
 
 echo "==> assembling $APP"
 rm -rf "$APP"
