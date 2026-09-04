@@ -11,6 +11,33 @@ struct Segment {
 struct TranscribedChunk {
     let chunk: Chunk
     let segments: [Segment]
+    /// False when a quiet stretch was skipped rather than transcribed. The
+    /// distinction matters in the output: "we listened and heard nothing" and
+    /// "we did not listen" are different claims, and only one of them is a
+    /// guarantee that no speech was missed.
+    let wasTranscribed: Bool
+}
+
+/// Where a run has got to, in enough detail to be worth showing someone.
+struct ChunkProgress: Equatable {
+    let index: Int          // zero-based
+    let total: Int
+    let kind: ChunkKind
+    let start: TimeInterval
+    let end: TimeInterval
+    /// Progress within this chunk, 0...1.
+    let fraction: Double
+
+    var overall: Double {
+        total > 0 ? (Double(index) + fraction) / Double(total) : 0
+    }
+
+    /// e.g. "chunk 3 of 7 · silence · 0:49-1:28"
+    var describe: String {
+        let kindLabel = kind == .silence ? "silence" : "speech"
+        return "chunk \(index + 1) of \(total) · \(kindLabel) · "
+             + "\(formatTimestamp(start))-\(formatTimestamp(end))"
+    }
 }
 
 /// Everything a finished transcription knows about itself.

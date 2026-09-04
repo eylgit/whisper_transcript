@@ -6,7 +6,8 @@ enum JobStatus: Equatable {
     case queued
     case reading
     case converting
-    case transcribing(Double)
+    case analysing
+    case transcribing(ChunkProgress)
     case writing
     case done(URL)
     case failed(String)
@@ -24,7 +25,10 @@ enum JobStatus: Equatable {
         case .queued: return "Waiting"
         case .reading: return "Reading audio"
         case .converting: return "Converting to 16 kHz"
-        case .transcribing(let p): return "Transcribing \(Int(p * 100))%"
+        case .analysing: return "Finding pauses"
+        case .transcribing(let p):
+            return p.total > 1 ? "\(p.describe) · \(Int(p.overall * 100))%"
+                               : "Transcribing \(Int(p.fraction * 100))%"
         case .writing: return "Writing Markdown"
         case .done: return "Done"
         case .failed: return "Failed"
@@ -37,12 +41,15 @@ struct Job: Identifiable, Equatable {
     let id = UUID()
     let url: URL
     var status: JobStatus = .queued
+    /// Filled in once the audio has been inspected and the work planned.
+    var audioDuration: TimeInterval? = nil
+    var chunkCount: Int? = nil
 
     var progress: Double? {
         switch status {
         case .queued: return 0
-        case .reading, .converting: return 0.02
-        case .transcribing(let p): return max(p, 0.02)
+        case .reading, .converting, .analysing: return 0.02
+        case .transcribing(let p): return max(p.overall, 0.02)
         case .writing: return 0.99
         case .done: return 1
         case .failed, .cancelled: return nil
@@ -58,6 +65,9 @@ struct Settings {
     var translateToEnglish = false
     var keepIntermediateWAV = false
     var carryContext = true
+    /// Transcribe quiet stretches too, so speech too soft to detect is not
+    /// silently dropped. Marked in the transcript either way.
+    var transcribeSilence = true
 
     static let languages: [(code: String, name: String)] = [
         ("auto", "Detect automatically"), ("en", "English"), ("zh", "Chinese"),
@@ -166,6 +176,7 @@ final class AppModel: ObservableObject {
                 request.options.translateToEnglish = self.settings.translateToEnglish
                 request.options.carryContext = self.settings.carryContext
                 request.keepIntermediateWAV = self.settings.keepIntermediateWAV
+                request.transcribeSilence = self.settings.transcribeSilence
 
                 do {
                     let out = try Transcriber.run(
@@ -174,6 +185,14 @@ final class AppModel: ObservableObject {
                             switch stage {
                             case .inspecting: self.update(job.id, .reading)
                             case .converting: self.update(job.id, .converting)
+                            case .analysing: self.update(job.id, .analysing)
+                            case .planned(let count, let duration):
+                                DispatchQueue.main.async {
+                                    guard let i = self.jobs.firstIndex(where: { $0.id == job.id })
+                                    else { return }
+                                    self.jobs[i].chunkCount = count
+                                    self.jobs[i].audioDuration = duration
+                                }
                             case .transcribing(let p): self.update(job.id, .transcribing(p))
                             case .writing: self.update(job.id, .writing)
                             }

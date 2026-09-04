@@ -100,6 +100,15 @@ struct ContentView: View {
                 .frame(maxWidth: 300)
 
                 Toggle("Translate into English", isOn: $model.settings.translateToEnglish)
+
+                Toggle("Transcribe quiet stretches too", isOn: $model.settings.transcribeSilence)
+                Text(model.settings.transcribeSilence
+                     ? "On: quiet stretches are transcribed as well, so speech too soft to detect is not silently dropped. They are marked in the transcript, because quiet is where the model is most likely to invent text."
+                     : "Off: quiet stretches are skipped. Faster and tidier, but anything spoken too softly to register will be lost. The gaps are still marked in the transcript.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Toggle("Keep the intermediate 16 kHz WAV", isOn: $model.settings.keepIntermediateWAV)
                 Toggle("Carry text between the model's windows", isOn: $model.settings.carryContext)
                 Text("On by default: it produces correct punctuation and consistent spelling. Long recordings are split at pauses anyway, which contains the repetition loops this used to risk.")
@@ -161,9 +170,9 @@ struct JobRow: View {
                 if case .failed(let message) = job.status {
                     Text(message).font(.caption2).foregroundStyle(.red).lineLimit(3)
                 } else if case .done(let out) = job.status {
-                    Text(out.lastPathComponent).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    Text(doneDetail(out)).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                 } else {
-                    Text(job.status.label).font(.caption2).foregroundStyle(.secondary)
+                    Text(detail).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
                 }
                 if let p = job.progress, !job.status.isFinished {
                     ProgressView(value: p).controlSize(.small)
@@ -179,12 +188,31 @@ struct JobRow: View {
         .padding(.vertical, 8)
     }
 
+    /// Duration and chunk shape sit alongside the moving status, so the size of
+    /// the job is visible rather than only how far through it is.
+    private var detail: String {
+        var parts: [String] = []
+        if let d = job.audioDuration { parts.append(formatDuration(d)) }
+        parts.append(job.status.label)
+        return parts.joined(separator: " · ")
+    }
+
+    private func doneDetail(_ out: URL) -> String {
+        var parts: [String] = []
+        if let d = job.audioDuration { parts.append(formatDuration(d)) }
+        if let c = job.chunkCount, c > 1 { parts.append("\(c) chunks") }
+        parts.append(out.lastPathComponent)
+        return parts.joined(separator: " · ")
+    }
+
     @ViewBuilder private var icon: some View {
         switch job.status {
         case .done:      Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
         case .failed:    Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
         case .cancelled: Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
         case .queued:    Image(systemName: "clock").foregroundStyle(.secondary)
+        case .analysing: Image(systemName: "waveform.badge.magnifyingglass")
+                            .foregroundStyle(Color.accentColor)
         default:         Image(systemName: "waveform").foregroundStyle(Color.accentColor)
         }
     }

@@ -7,12 +7,24 @@ struct TranscriptionRequest {
     var keepIntermediateWAV = false
     /// Overwrite an existing .md rather than picking the next free name.
     var overwrite = false
+    /// Transcribe the quiet stretches too, rather than only the speech.
+    ///
+    /// On by default: the loudness measurement can be wrong, and someone
+    /// speaking softly would otherwise be dropped without trace. Turning it off
+    /// is faster and produces a tidier transcript, at the cost of that
+    /// guarantee. Quiet stretches are marked either way, so the reader can
+    /// always see where they were.
+    var transcribeSilence = true
 }
 
 enum Stage {
     case inspecting
     case converting
-    case transcribing(Double)   // 0...1
+    case analysing
+    /// Emitted once the work is planned, so a caller can show the whole shape
+    /// of the job before it starts rather than only a moving bar.
+    case planned(chunks: Int, duration: TimeInterval)
+    case transcribing(ChunkProgress)
     case writing
 }
 
@@ -99,10 +111,12 @@ enum Transcriber {
         // into repeating itself cannot spread past the pause it started in.
         var chunks: [Chunk]
         var chunkingSummary: String? = nil
+        onStage?(.analysing)
         do {
             let analysis = try SilenceDetector.analyse(wav: wav)
             chunks = ChunkPlanner.plan(duration: info.duration, silences: analysis.regions)
             onLog?("audio: \(analysis.summary)")
+            _ = analysis
             if chunks.count > 1 {
                 chunkingSummary = "\(chunks.count) chunks; \(analysis.summary)"
             }
@@ -112,13 +126,29 @@ enum Transcriber {
             chunks = [Chunk(kind: .speech, start: 0, end: info.duration)]
         }
 
+        onStage?(.planned(chunks: chunks.count, duration: info.duration))
+
         var transcribed: [TranscribedChunk] = []
         var language: String? = nil
         var usedNeuralEngine = false
-        let total = Double(chunks.count)
+
+        func progress(_ index: Int, _ chunk: Chunk, _ fraction: Double) -> ChunkProgress {
+            ChunkProgress(index: index, total: chunks.count, kind: chunk.kind,
+                          start: chunk.start, end: chunk.end, fraction: fraction)
+        }
 
         for (index, chunk) in chunks.enumerated() {
-            onStage?(.transcribing(Double(index) / total))
+            onStage?(.transcribing(progress(index, chunk, 0)))
+
+            // Skipping a quiet stretch is the user's call; it is still recorded
+            // and marked, so the transcript never hides that a gap existed.
+            if chunk.kind == .silence && !request.transcribeSilence {
+                onLog?("chunk \(index + 1)/\(chunks.count): silence skipped by request")
+                transcribed.append(TranscribedChunk(chunk: chunk, segments: [],
+                                                    wasTranscribed: false))
+                continue
+            }
+
             if chunks.count > 1 {
                 onLog?(String(format: "chunk %d/%d %@ %.1fs-%.1fs",
                               index + 1, chunks.count,
@@ -129,7 +159,7 @@ enum Transcriber {
                 wav: wav, layout: layout, options: request.options,
                 offset: chunk.start,
                 duration: chunks.count > 1 ? chunk.duration : nil,
-                onProgress: { onStage?(.transcribing((Double(index) + $0) / total)) },
+                onProgress: { onStage?(.transcribing(progress(index, chunk, $0))) },
                 onLog: onLog,
                 registerHandle: registerHandle)
 
@@ -151,7 +181,8 @@ enum Transcriber {
             if owned.count != output.segments.count {
                 onLog?("chunk \(index + 1): dropped \(output.segments.count - owned.count) segment(s) that overran the chunk")
             }
-            transcribed.append(TranscribedChunk(chunk: chunk, segments: owned))
+            transcribed.append(TranscribedChunk(chunk: chunk, segments: owned,
+                                                wasTranscribed: true))
         }
 
         guard transcribed.contains(where: { !$0.segments.isEmpty }) else {

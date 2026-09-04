@@ -133,10 +133,15 @@ enum MarkdownBuilder {
                 let length = formatDuration(entry.chunk.duration)
 
                 out += "> ⏸ **Silence — \(from) to \(to)** (\(length))\n"
+                guard entry.wasTranscribed else {
+                    out += "> Measured as quiet and skipped, so any speech here was not captured.\n"
+                    out += "> ⏹ **End of silence — \(to)**\n\n"
+                    continue
+                }
                 out += "> Measured as quiet, transcribed separately as a precaution.\n"
                 out += "> Treat anything below as unreliable until the end marker.\n>\n"
                 if entry.segments.isEmpty {
-                    out += "> _Nothing was transcribed here._\n>\n"
+                    out += "> _Listened, nothing transcribed._\n>\n"
                 } else {
                     for para in paragraphs(from: entry.segments) {
                         out += "> \(para)\n>\n"

@@ -18,6 +18,9 @@ func usage() -> String {
                             windows. Avoids repetition loops but degrades
                             punctuation; normally unnecessary, since the
                             recording is split at long pauses instead.
+      -s, --skip-silence    Do not transcribe the quiet stretches. Faster and
+                            tidier, but speech too quiet to detect would be
+                            lost. They are marked in the transcript either way.
       -k, --keep-wav        Keep the intermediate 16 kHz WAV beside the source
       -f, --force           Overwrite an existing .md instead of numbering a new one
       -q, --quiet           Only print the path of each file written
@@ -46,7 +49,7 @@ func fail(_ message: String) -> Never {
 
 var request = TranscriptionRequest(source: URL(fileURLWithPath: "/"))
 var options = WhisperOptions()
-var keepWAV = false, force = false, quiet = false
+var keepWAV = false, force = false, quiet = false, skipSilence = false
 var inputs: [URL] = []
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -68,6 +71,8 @@ while !args.isEmpty {
         options.threads = n
     case "-C", "--no-carry-context":
         options.carryContext = false
+    case "-s", "--skip-silence":
+        skipSilence = true
     case "-k", "--keep-wav":
         keepWAV = true
     case "-f", "--force":
@@ -123,27 +128,50 @@ for input in inputs {
     req.options = options
     req.keepIntermediateWAV = keepWAV
     req.overwrite = force
+    req.transcribeSilence = !skipSilence
 
-    var lastPercent = -1
+    var lastLine = ""
+    let name = input.lastPathComponent
     do {
         let out = try Transcriber.run(req, layout: layout, onStage: { stage in
             switch stage {
-            case .inspecting:   note("\(input.lastPathComponent): reading audio")
-            case .converting:   note("\(input.lastPathComponent): converting to 16 kHz mono WAV")
-            case .transcribing(let p):
-                let pct = Int(p * 100)
-                if pct != lastPercent && !quiet {
-                    lastPercent = pct
-                    FileHandle.standardError.write(Data("\r\(input.lastPathComponent): transcribing \(pct)%   ".utf8))
+            case .inspecting:
+                note("\(name): reading audio")
+            case .converting:
+                note("\(name): converting to 16 kHz mono WAV")
+            case .analysing:
+                note("\(name): measuring loudness to find pauses")
+            case .planned(let count, let duration):
+                if count > 1 {
+                    note("\(name): \(formatDuration(duration)) split into \(count) chunks")
+                } else {
+                    note("\(name): \(formatDuration(duration)), single pass")
                 }
+            case .transcribing(let p):
+                guard !quiet else { return }
+                let line = p.total > 1
+                    ? "\(name): \(p.describe)  \(Int(p.overall * 100))%"
+                    : "\(name): transcribing \(Int(p.fraction * 100))%"
+                guard line != lastLine else { return }
+                // Pad to overwrite the previous, possibly longer, line.
+                let padded = line.padding(toLength: max(line.count, lastLine.count),
+                                          withPad: " ", startingAt: 0)
+                lastLine = line
+                FileHandle.standardError.write(Data("\r\(padded)".utf8))
             case .writing:
-                if !quiet { FileHandle.standardError.write(Data("\r".utf8)) }
-                note("\(input.lastPathComponent): writing Markdown")
+                if !quiet && !lastLine.isEmpty {
+                    FileHandle.standardError.write(
+                        Data("\r\(String(repeating: " ", count: lastLine.count))\r".utf8))
+                }
+                note("\(name): writing Markdown")
             }
         })
         print(out.path)
     } catch {
-        if !quiet { FileHandle.standardError.write(Data("\r".utf8)) }
+        if !quiet && !lastLine.isEmpty {
+            FileHandle.standardError.write(
+                Data("\r\(String(repeating: " ", count: lastLine.count))\r".utf8))
+        }
         FileHandle.standardError.write(Data("error: \(error.localizedDescription)\n".utf8))
         failures += 1
     }

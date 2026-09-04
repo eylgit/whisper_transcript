@@ -34,6 +34,7 @@ translation and a couple of switches.
 build/transcribe recording.m4a          # → recording.md
 build/transcribe *.m4a                  # several at once
 build/transcribe -l de recording.wav    # force a language
+build/transcribe --skip-silence long.m4a # don't transcribe the quiet stretches
 build/transcribe --help
 ```
 
@@ -134,6 +135,17 @@ one part, so no words can fall in a crack — coverage is deliberately redundant
 because a gap would mean silently losing speech while an overlap only means a
 duplicated moment of quiet. And the quiet stretch is **transcribed too**, in
 case the loudness measurement was wrong and someone was in fact speaking softly.
+
+That last part is optional — *Transcribe quiet stretches too* in the app's
+Options, or `--skip-silence` on the command line — because it costs real time.
+On a test recording that was mostly gaps, transcribing them took 82 seconds
+against 39 with them skipped. Turning it off is faster and produces a tidier
+transcript, but anything spoken too softly to register is then lost. The gaps
+are marked either way, and the marker says which happened: *"transcribed
+separately as a precaution"* versus *"measured as quiet and skipped, so any
+speech here was not captured."* The distinction matters — "we listened and heard
+nothing" and "we did not listen" are different claims, and only one of them
+guarantees nothing was missed.
 
 Because quiet stretches are exactly where the model invents things, they are
 fenced off and labelled in the transcript:
