@@ -1,5 +1,7 @@
 # Transcribe
 
+[![CI](https://github.com/eylgit/whisper_transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/eylgit/whisper_transcript/actions/workflows/ci.yml)
+
 Offline audio → Markdown on macOS, built on [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
 and the `large-v3` model.
 
@@ -27,6 +29,9 @@ recording.m4a  →  recording.md
   SHA256-verified — setup aborts on a mismatch rather than transcribing with an
   unknown file.
 - **No Xcode, no Homebrew, no `sudo`.** Command Line Tools only.
+- **Tested where it counts.** 41 unit tests over the chunking, the silence
+  analysis, the sandbox profile and the Markdown assembly — including a property
+  test asserting that no audio can fall between chunks, which found a real bug.
 - **The network is used during setup only**, for three things, each named below.
 
 It exists because of one specific problem.
