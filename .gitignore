@@ -1,0 +1,8 @@
+# Build output, logs, and generated caches
+build/
+
+# Downloaded whisper models (multi-GB, fetched by scripts/)
+models/
+
+# macOS
+.DS_Store
