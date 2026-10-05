@@ -326,6 +326,9 @@ Tests/               unit tests for the pure core
 scripts/             build, test, icon generation, sandbox verification
 vendor/whisper.cpp   pinned to a specific commit
 models/              ggml-large-v3.bin (checksum-verified)
+docs/guides/         how the software works now, for coding agents; start at overall.md
+docs/tasks/          one dated folder per piece of work, each with a plan.md
+CLAUDE.md            the entry point for coding agents: commands, rules, index of guides
 ```
 
 Both front ends depend on `TranscribeCore` and on nothing else, so they cannot drift apart.

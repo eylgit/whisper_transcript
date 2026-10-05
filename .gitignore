@@ -13,3 +13,4 @@ Transcribe.app/
 # SwiftPM
 .build/
 .build-test/
+.swiftpm/
