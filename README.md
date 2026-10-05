@@ -41,7 +41,7 @@ Drop a recording on the app and get a readable `.md` transcript beside it.
 | 📂 **Nothing hidden on disk** | Exactly two files, both beside your original. Never `/tmp`, never a hidden cache. |
 | ♻️ **Reproducible** | whisper.cpp pinned to an exact commit; the 3.1 GB model SHA256-verified. Setup aborts on a mismatch rather than transcribing with an unknown file. |
 | 🛠 **No Xcode, no Homebrew, no `sudo`** | Command Line Tools only. |
-| ✅ **Tested where it counts** | 41 unit tests over the chunking, silence analysis, sandbox profile and Markdown assembly — including a property test asserting no audio can fall between chunks, [which found a real bug](#tests). |
+| ✅ **Tested where it counts** | 41 unit tests over the chunking, silence analysis, sandbox profile and Markdown assembly — including a randomised test asserting no audio can fall between chunks. Writing them [found a real bug](#tests). |
 | 🌐 **Network used during setup only** | For exactly three things, [each named below](#install). |
 
 ---
@@ -292,9 +292,12 @@ is most of the interesting logic.
 - **`ChunkPlanner`** — largely one property, checked over 500 randomly shaped recordings:
   *every instant of audio belongs to at least one chunk.* Losing speech in a gap between
   chunks is the worst thing this tool could do, and it would be invisible in the output.
-  This test found a real bug — a recording that opens with a pause produced a leading
+  Named tests pin the edge cases the random one cannot judge, such as how a range is labelled.
+  Writing these tests found a real bug — a recording that opens with a pause produced a leading
   "speech" chunk lying entirely inside the silence, which is precisely where the model
-  invents text, and it would have reached the transcript unlabelled.
+  invents text, and it would have reached the transcript unlabelled. To be exact about which
+  test catches it: the audio was still fully covered, so the randomised test passes with the
+  bug put back. The named test for a pause at the very start is the one that fails.
 - **`SilenceDetector`** — against synthesised WAVs at known levels: that a pause is found,
   that one shorter than the minimum is not, that the same *shape* of recording gives the
   same answer whether it is loud or faint, and that a recording with too little dynamic
