@@ -1,0 +1,17 @@
+Welcome to this recording. Today we are going to talk about how speech recognition systems handle long form audio, and why the details matter more than people expect.
+
+The first thing to understand is that a transcription model does not hear words. It hears a spectrogram, a picture of sound over time, and it learns to associate patterns in that picture with sequences of text tokens.
+
+This has a few consequences. Silence is meaningful. A long pause often marks the boundary between one thought and the next, which is exactly the signal you want if you are trying to break a transcript into readable paragraphs.
+
+Punctuation is also predicted rather than heard. The model has learned from millions of hours of transcribed speech where a full stop tends to fall, and it guesses accordingly. It is usually right, and occasionally confidently wrong.
+
+Let us consider the question of privacy. When you send audio to a cloud service, you are trusting that provider with something quite intimate. A recording of a meeting contains not just what was decided, but who hesitated, who interrupted, and who said nothing at all.
+
+Running the model on your own machine changes that calculation entirely. The audio never leaves the device. There is no request log, no retention policy to read, and no account to delete.
+
+The tradeoff, of course, is speed. A large model running on a laptop is slower than the same model running on a rack of accelerators in a data centre. Whether that matters depends entirely on whether you are in a hurry.
+
+For most people transcribing an interview or a lecture, waiting a few minutes is a perfectly reasonable price to pay. You start the job, you go and make a cup of tea, and the text is waiting when you return.
+
+Thank you for listening. This has been a synthetic recording, generated on this machine, for the purpose of testing a transcription pipeline.

@@ -13,10 +13,13 @@ task in hand needs.
 ./scripts/test.sh             # unit tests, under a second once built; needs Xcode for XCTest
 ./scripts/build-app.sh        # build the CLI and the app into build/
 ./scripts/verify-sandbox.sh   # prove the sandbox blocks what it claims; needs build/ and a network
+./scripts/golden.sh           # score the model's real output on known recordings; about two minutes
 ```
 
 Run `test.sh` before calling anything done. If the change touches `Sandbox.swift` or how child
 processes are launched, run `verify-sandbox.sh` too and read every line, not only the last.
+If the change touches `Tuning.swift`, chunking, or the options passed to whisper, run `golden.sh`
+and compare its numbers with the ones in `docs/guides/testing.md`.
 CI builds and runs the unit tests on every push. It cannot run the model.
 
 ## Rules that are not negotiable
@@ -59,5 +62,5 @@ the guides are the map for agents and point into the README and the code.
 
 ## Not done yet
 
-Listed so nobody assumes they exist: a scored set of recordings to judge transcription quality;
-an automatic check that guides have not gone stale; a home for decision records.
+Listed so nobody assumes they exist: recordings of real voices, accents or noise in the golden
+set (it holds three clear synthetic ones); an automatic check that guides have not gone stale; a home for decision records.

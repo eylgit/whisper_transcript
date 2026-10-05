@@ -14,3 +14,7 @@ Transcribe.app/
 .build/
 .build-test/
 .swiftpm/
+
+# Anything the tool writes if a golden recording is transcribed in place
+golden/*.md
+golden/*.whisper-tmp.wav

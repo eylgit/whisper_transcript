@@ -1,0 +1,14 @@
+# One run per line:  label | audio file | transcribe options | max word errors % | max escaped | expect
+#
+# The expected text for <audio>.<ext> is <audio>.txt beside it.
+# "-" as a threshold means measure and report only.
+# expect is "pass" or "known-failure". A known failure that starts passing fails the
+# run on purpose, so this file gets corrected.
+#
+# Thresholds were set AFTER the first measured run (2026-10-05: 0.0, 0.0, 30.7 and 0.3 %).
+# 2 % allows a word or two of spelling or run-to-run difference on these short scripts and
+# no more: one lost sentence is 8 % or worse. No escaped text is allowed at all.
+standup                       | standup.flac          |                    | 2.0 | 0 | pass
+meeting-roomtone              | meeting-roomtone.flac |                    | 2.0 | 0 | pass
+monologue                     | monologue.m4a         |                    | 2.0 | 0 | known-failure
+monologue --no-carry-context  | monologue.m4a         | --no-carry-context | 2.0 | 0 | pass

@@ -25,7 +25,8 @@ Sources/Core/   TranscribeCore: everything above. A library, so it can be tested
 Sources/App/    SwiftUI drag-and-drop front end
 Sources/CLI/    command-line front end
 Tests/          unit tests for the pure parts of Core
-scripts/        build, test, sandbox verification, icon
+scripts/        build, test, sandbox verification, golden-set scoring, icon
+golden/         recordings with known correct text, and the thresholds they must meet
 vendor/         whisper.cpp, pinned to one commit
 docs/guides/    how the software works now (this folder)
 docs/tasks/     one folder per piece of work, each with a plan.md
@@ -37,7 +38,8 @@ Both front ends depend on `TranscribeCore` and nothing else, so they cannot drif
 
 The parts that decide things (`SilenceDetector`, `ChunkPlanner`, `MarkdownBuilder`, the sandbox
 profile text, output naming) are plain functions over plain data and are unit tested. The parts
-that run the model need a 3.1 GB file and a GPU, so they are exercised by hand, not in CI.
+that run the model need a 3.1 GB file and a GPU, so they are not in CI. They are scored locally
+by `./scripts/golden.sh` against three recordings whose correct text is known.
 
 ## The guides
 

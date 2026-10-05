@@ -310,6 +310,20 @@ is most of the interesting logic.
   skipped gap and a listened-to gap carry visibly different wording.
 - **Output naming** — that an existing `.md` is numbered rather than overwritten.
 
+The model's own output is scored separately, on your machine, against three synthetic
+recordings whose scripts are known:
+
+```sh
+./scripts/golden.sh
+```
+
+On the two recordings with long gaps it reproduces the script word for word. On the longer of
+them the model invents "Thank you." in each of three gaps, and all three land inside a fenced
+block. On the third recording, a 107-second monologue with no pause to cut at, the default
+settings repeat one sentence six times and score 30.7% word errors — the known limitation
+above, measured rather than described. Three clear synthetic
+recordings say nothing about real voices or noisy rooms.
+
 > [!IMPORTANT]
 > Since the point of this section is that claims should be checkable: XCTest is distributed
 > inside Xcode, not the Command Line Tools. **Building** Transcribe needs only the Command
@@ -326,7 +340,8 @@ Sources/Core/        TranscribeCore — conversion, chunking, whisper driver, sa
 Sources/App/         SwiftUI drag-and-drop front end
 Sources/CLI/         command line front end
 Tests/               unit tests for the pure core
-scripts/             build, test, icon generation, sandbox verification
+scripts/             build, test, icon generation, sandbox verification, golden-set scoring
+golden/              recordings with known correct text, for scoring the model's output
 vendor/whisper.cpp   pinned to a specific commit
 models/              ggml-large-v3.bin (checksum-verified)
 docs/guides/         how the software works now, for coding agents; start at overall.md
