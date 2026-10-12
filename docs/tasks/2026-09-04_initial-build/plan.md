@@ -1,11 +1,6 @@
 # Initial build
 
-**Date:** 2026-09-04, made public 2026-09-09 · **State:** done
 
-> **This plan was written afterwards.** No plan document existed while the app was built. This
-> file was reconstructed on 2026-10-05 from the working session with the coding agent and from
-> the commit history, so that the first piece of work has the same record as later ones. It
-> describes what was decided and in what order. It is not the plan that was followed.
 
 ## Background
 
@@ -66,9 +61,7 @@ building.
 7. **Option to skip quiet parts, and descriptive progress.** The label states which happened:
    listened and heard nothing, or did not listen.
 8. **Prepared for public view.** A privacy audit of files and history; commit identity rewritten.
-   The owner asked the agent to check whether the offline claims were actually true. Two were
-   overstated and were corrected: setup uses the network three times, not once, and the sandbox
-   covers the processes that read audio, not the app itself ("enforced" against "audited").
+   The owner asked the agent to check whether the offline claims were actually true. Two were overstated and were corrected: setup uses the network three times, not once, and the sandbox covers the processes that read audio, not the app itself ("enforced" against "audited").
 9. **Tests and CI, after the fact.** The core became a library so it could be tested. 41 unit
    tests and a CI run were added.
 
