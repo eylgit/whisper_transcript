@@ -22,6 +22,7 @@ the unit tests and checks that the shell scripts parse.
 | `SandboxTests` | The profile text: network and writes denied, deny before allow, `/` never writable, paths quoted. One test runs `sandbox-exec` for real and confirms the kernel refuses a write outside the allowed folder |
 | `MarkdownBuilderTests` | Paragraphs, CJK text joined without spaces, and that a skipped gap and a listened-to gap are worded differently |
 | `OutputNamingTests` | An existing `.md` is numbered, never overwritten |
+| `ArchitectureTests` | The source, read as text with comments removed: every file in `Sources/Core/` imports only `Foundation`, and no file in `Sources/` mentions `URLSession`, `NWConnection`, `CFNetwork` or `import Network`. A third test feeds each rule a sample, so a rule that matches nothing cannot pass unnoticed. It checks what the code says, not what a process can do; that is `verify-sandbox.sh` |
 
 ## The golden set: checking what the model actually returns
 
