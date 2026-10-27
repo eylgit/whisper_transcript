@@ -46,7 +46,7 @@ the guides are the map for agents and point into the README and the code.
 | Guide | Open it when the task touches |
 | --- | --- |
 | [`overall.md`](docs/guides/overall.md) | anything, first |
-| [`how-transcription-works.md`](docs/guides/how-transcription-works.md) | silence detection, chunking, tuning numbers, the Markdown output |
+| [`how-transcription-works.md`](docs/guides/how-transcription-works.md) | the pipeline's logic. An overview; it points to one detail page each for cutting at pauses, finding the pauses, and known limits. Open only the page the task touches |
 | [`offline-guarantee.md`](docs/guides/offline-guarantee.md) | the sandbox, child processes, anything that reads or writes files |
 | [`testing.md`](docs/guides/testing.md) | adding or changing a test |
 

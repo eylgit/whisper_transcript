@@ -45,6 +45,6 @@ by `./scripts/golden.sh` against three recordings whose correct text is known.
 
 | Guide | What it covers |
 | --- | --- |
-| [`how-transcription-works.md`](how-transcription-works.md) | Why recordings are cut at pauses, how, and the numbers involved |
+| [`how-transcription-works.md`](how-transcription-works.md) | The two faults and the rule that contains them. An overview; the detail is in `how-transcription-works/`, one page each for cutting at pauses, finding the pauses, and known limits |
 | [`offline-guarantee.md`](offline-guarantee.md) | What the sandbox enforces, what is only audited, how to prove it |
 | [`testing.md`](testing.md) | How to run the checks and what each one protects |
