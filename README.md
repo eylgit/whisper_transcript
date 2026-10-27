@@ -8,7 +8,7 @@ Not "we don't upload your audio" — *every process that touches it is cut off f
 network by the kernel.*
 
 [![CI](https://github.com/eylgit/whisper_transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/eylgit/whisper_transcript/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-41-brightgreen)](#tests)
+[![Tests](https://img.shields.io/badge/tests-44-brightgreen)](#tests)
 [![Platform](https://img.shields.io/badge/platform-macOS%2013%2B%20Apple%20Silicon-lightgrey)](#requirements)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 
@@ -41,7 +41,7 @@ Drop a recording on the app and get a readable `.md` transcript beside it.
 | 📂 **Nothing hidden on disk** | Exactly two files, both beside your original. Never `/tmp`, never a hidden cache. |
 | ♻️ **Reproducible** | whisper.cpp pinned to an exact commit; the 3.1 GB model SHA256-verified. Setup aborts on a mismatch rather than transcribing with an unknown file. |
 | 🛠 **No Xcode, no Homebrew, no `sudo`** | Command Line Tools only. |
-| ✅ **Tested where it counts** | 41 unit tests over the chunking, silence analysis, sandbox profile and Markdown assembly — including a randomised test asserting no audio can fall between chunks. Writing them [found a real bug](#tests). |
+| ✅ **Tested where it counts** | 44 unit tests over the chunking, silence analysis, sandbox profile, Markdown assembly and the source's own layering rules — including a randomised test asserting no audio can fall between chunks. Writing them [found a real bug](#tests). |
 | 🌐 **Network used during setup only** | For exactly three things, [each named below](#install). |
 
 ---

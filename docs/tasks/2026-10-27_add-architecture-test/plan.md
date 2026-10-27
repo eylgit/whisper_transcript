@@ -1,7 +1,6 @@
 # Add a source-level architecture test
 
-**Date:** 2026-10-27 · **State:** committed, not yet run — open until the first two exit
-criteria are met
+**Date:** 2026-10-27 · **State:** done
 
 ## Background
 
@@ -46,15 +45,17 @@ exists.
 
 ## Exit criteria
 
-- [ ] `./scripts/test.sh` is green and the new tests appear in its output. **Not run.** The file
-      was only type-checked, with `swiftc -typecheck`, which passed.
-- [ ] Seen to fail: with `import AppKit` added to one Core file, the new test fails for that
-      reason with the file named; then the line is removed. The failing test is recorded here.
-      **Not done.** `Sources/` was never touched.
+- [x] `./scripts/test.sh` is green and the new tests appear in its output. *Run 2026-10-27:
+      "Executed 44 tests, with 0 failures" in 0.9 s; 41 before this task plus the three here.*
+- [x] Seen to fail: with `import AppKit` added to one Core file, the new test fails for that
+      reason with the file named; then the line is removed. *Done 2026-10-27, on
+      `Sources/Core/Tuning.swift`. `testCoreImportsOnlyFoundation` failed with:
+      `Sources/Core/Tuning.swift breaks "Core imports only Foundation": line 1: `import AppKit``.
+      The other two architecture tests passed. The line was removed and `git diff` showed no
+      change under `Sources/`.*
 - [x] `docs/guides/testing.md`: one new row in the "What each test file protects" table.
-- [ ] This plan has its State set to done, every box ticked or honestly left unticked, and a
-      "What went wrong" section. The section is written and the boxes are honest; State is not
-      done, because the tests have not run.
+- [x] This plan has its State set to done, every box ticked or honestly left unticked, and a
+      "What went wrong" section.
 - [x] One commit, in the repository's existing style, containing the test, the doc row and this
       folder. Nothing else in the diff.
 - [x] No personal data anywhere: no names, emails, machine names or home-directory paths in
@@ -76,7 +77,9 @@ exists.
   comment stripper a sample, so that rule 2 and the stripping have a check that does not touch
   `Sources/`. It has not run either.
 
-**Left open, and this task stays open until it is done:** run `./scripts/test.sh` outside the
-agent's sandbox; add `import AppKit` to `Sources/Core/Tuning.swift`, run
-`./scripts/test.sh --filter ArchitectureTests`, record which test fails and what it says, then
-remove the line. Tick the first two boxes and set State to done.
+**Closed later the same day.** The owner ran `./scripts/test.sh` outside the agent's sandbox:
+44 tests, 0 failures. Then `import AppKit` was added to `Sources/Core/Tuning.swift` and
+`./scripts/test.sh --filter ArchitectureTests` run: `testCoreImportsOnlyFoundation` failed
+naming the file, the line and the rule's reason; the line was removed. The README's test count
+went from 41 to 44 in the same commit. The `noNetworking` rule has still not been seen to catch
+anything in the real tree; only its sample check in `testTheRulesSeeCodeButNotComments` has.
